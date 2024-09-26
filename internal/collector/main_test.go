@@ -1,14 +1,15 @@
-package main
+package collector
 
 import (
 	"testing"
 	"time"
 
+	"github.com/aleks-papushin/system-monitor/internal/models"
 	"github.com/stretchr/testify/require"
 )
 
 func TestParseLastSecLoadAverage(t *testing.T) {
-	collector := &MacOSStatCollector{}
+	c := &MacOSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
@@ -21,38 +22,38 @@ func TestParseLastSecLoadAverage(t *testing.T) {
 		},
 	} {
 		t.Run(tc.Name, func(t *testing.T) {
-			actualResult := collector.parseLastSecLoadAverage(tc.TestData)
+			actualResult := c.ParseLastSecLoadAverage(tc.TestData)
 			require.Equal(t, tc.ExpResult, actualResult)
 		})
 	}
 }
 
 func TestParseCpuUsage(t *testing.T) {
-	collector := &MacOSStatCollector{}
+	c := &MacOSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
-		ExpResult CpuUsage
+		ExpResult models.CpuUsage
 	}{
 		{
 			Name:     "Regular CPU usage entry",
 			TestData: "CPU usage: 2.36% user, 5.45% sys, 92.18% idle",
-			ExpResult: CpuUsage{
-				userUsage: 2.36,
-				sysUsage:  5.45,
-				idle:      92.18,
+			ExpResult: models.CpuUsage{
+				UserUsage: 2.36,
+				SysUsage:  5.45,
+				Idle:      92.18,
 			},
 		},
 	} {
 		t.Run(tc.Name, func(t *testing.T) {
-			actualResult := collector.parseCpuUsage(tc.TestData)
+			actualResult := c.ParseCpuUsage(tc.TestData)
 			require.Equal(t, tc.ExpResult, actualResult)
 		})
 	}
 }
 
 func TestParseDate(t *testing.T) {
-	collector := &MacOSStatCollector{}
+	c := &MacOSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
@@ -65,7 +66,7 @@ func TestParseDate(t *testing.T) {
 		},
 	} {
 		t.Run(tc.Name, func(t *testing.T) {
-			actualResult := collector.parseDate(tc.TestData)
+			actualResult := c.ParseDate(tc.TestData)
 			require.Equal(t, tc.ExpResult, actualResult)
 		})
 	}
@@ -77,11 +78,11 @@ func TestGetStatSnapshot(t *testing.T) {
 		Output: mockOutput,
 		Err:    nil,
 	}
-	collector := &MacOSStatCollector{
-		executor: mockExecutor,
+	c := &MacOSStatCollector{
+		Executor: mockExecutor,
 	}
 
-	result, err := collector.getStatSnapshot()
+	result, err := c.GetStatSnapshot()
 	require.NoError(t, err)
 	require.Equal(t, string(mockOutput), result)
 }

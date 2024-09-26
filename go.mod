@@ -1,4 +1,4 @@
-module otus_final_project
+module github.com/aleks-papushin/system-monitor
 
 go 1.23
 
