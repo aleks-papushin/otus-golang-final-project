@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package stat;
+
+option go_package = "github.com/aleks-papushin/system-monitor/internal/models";
+
+service StatService {
+  rpc GetStats(StatsRequest) returns (stream StatsResponse);
+}
+
+message StatsRequest {}
+
+message StatsResponse {
+  float loadAverage = 1;
+  float userUsage = 2;
+  float sysUsage = 3;
+  float idle = 4;
+  string timestamp = 5;
+}
