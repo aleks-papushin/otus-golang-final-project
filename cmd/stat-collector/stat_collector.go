@@ -7,11 +7,6 @@ import (
 	"github.com/aleks-papushin/system-monitor/internal/models"
 )
 
-const (
-	statCollectingInterval = 5
-	maxM                   = 24 * 60 * 60
-)
-
 func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -23,7 +18,8 @@ func main() {
 	c := &collector.MacOSStatCollector{}
 
 	wg.Add(1)
-	collector.StartStatCollecting(n, m, statChan, &wg, c)
+
+	c.CollectMacOSStat(statChan, n, m)
 
 	wg.Wait()
 }

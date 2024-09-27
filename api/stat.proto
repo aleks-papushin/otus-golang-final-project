@@ -2,13 +2,16 @@ syntax = "proto3";
 
 package stat;
 
-option go_package = "github.com/aleks-papushin/system-monitor/internal/models";
+option go_package = "api/gen";
 
 service StatService {
   rpc GetStats(StatsRequest) returns (stream StatsResponse);
 }
 
-message StatsRequest {}
+message StatsRequest {
+  int32 n = 1;
+  int32 m = 2;
+}
 
 message StatsResponse {
   float loadAverage = 1;

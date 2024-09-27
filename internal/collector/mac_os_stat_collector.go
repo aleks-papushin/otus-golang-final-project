@@ -1,8 +1,10 @@
 package collector
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aleks-papushin/system-monitor/internal/models"
@@ -10,6 +12,20 @@ import (
 
 type MacOSStatCollector struct {
 	Executor CommandExecutor
+}
+
+var (
+	instance *MacOSStatCollector
+	once     sync.Once
+)
+
+func GetMacOSStatCollector() *MacOSStatCollector {
+	once.Do(func() {
+		instance = &MacOSStatCollector{
+			Executor: &RealCommandExecutor{},
+		}
+	})
+	return instance
 }
 
 func (c *MacOSStatCollector) GetStatSnapshot() (string, error) {
@@ -47,4 +63,44 @@ func (c *MacOSStatCollector) ParseCpuUsage(line string) models.CpuUsage {
 		SysUsage:  float32(s),
 		Idle:      float32(i),
 	}
+}
+
+func (c *MacOSStatCollector) CollectMacOSStat(statChan chan *models.Stat, n, m int) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	wg.Add(1)
+	c.startStatCollecting(n, m, statChan, &wg)
+
+	wg.Wait()
+}
+
+func (c *MacOSStatCollector) startStatCollecting(n, m int, statChan chan *models.Stat, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(5 * time.Second)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				statSnapshot, err := c.GetStatSnapshot()
+				statSlice := strings.Split(statSnapshot, "\n")
+				if err != nil {
+					errOut := fmt.Errorf("error occured attempting get load average %w", err)
+					fmt.Println(errOut)
+				}
+				t := c.ParseDate(statSlice[1])
+				la := c.ParseLastSecLoadAverage(statSlice[2])
+				cpu := c.ParseCpuUsage(statSlice[3])
+
+				stat := models.Stat{
+					LoadAverage: la,
+					CpuUsage:    cpu,
+					Time:        t,
+				}
+
+				statChan <- &stat
+			}
+		}
+	}()
 }

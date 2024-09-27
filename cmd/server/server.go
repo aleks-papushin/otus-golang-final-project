@@ -15,11 +15,17 @@ import (
 
 type server struct {
 	pb.UnimplementedStatServiceServer
-	statChan <-chan *models.Stat
+	statChan chan *models.Stat
 }
 
 func (s *server) GetStats(req *pb.StatsRequest, stream pb.StatService_GetStatsServer) error {
-	for stat := range s.statChan {
+	c := collector.GetMacOSStatCollector()
+	go func() {
+		c.CollectMacOSStat(s.statChan, int(req.N), int(req.M))
+	}()
+	var readOnlyStatChan <-chan *models.Stat
+	readOnlyStatChan = s.statChan
+	for stat := range readOnlyStatChan {
 		resp := &pb.StatsResponse{
 			LoadAverage: stat.LoadAverage,
 			UserUsage:   stat.CpuUsage.UserUsage,
@@ -46,10 +52,6 @@ func main() {
 	statChan := make(chan *models.Stat, 100)
 	pb.RegisterStatServiceServer(s, &server{statChan: statChan})
 	reflection.Register(s)
-
-	go func() {
-		collector.CollectMacOSStat(statChan)
-	}()
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
