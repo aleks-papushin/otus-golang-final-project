@@ -3,29 +3,24 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
 	pb "github.com/aleks-papushin/system-monitor/api/gen"
 	"github.com/aleks-papushin/system-monitor/internal/collector"
-	"github.com/aleks-papushin/system-monitor/internal/models"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 type server struct {
 	pb.UnimplementedStatServiceServer
-	statChan chan *models.Stat
 }
 
 func (s *server) GetStats(req *pb.StatsRequest, stream pb.StatService_GetStatsServer) error {
 	c := collector.GetMacOSStatCollector()
-	go func() {
-		c.CollectMacOSStat(s.statChan, int(req.N), int(req.M))
-	}()
-	var readOnlyStatChan <-chan *models.Stat
-	readOnlyStatChan = s.statChan
-	for stat := range readOnlyStatChan {
+	avgStatChan := c.CollectMacOSStat(int(req.N), int(req.M))
+	for stat := range avgStatChan {
 		resp := &pb.StatsResponse{
 			LoadAverage: stat.LoadAverage,
 			UserUsage:   stat.CpuUsage.UserUsage,
@@ -41,7 +36,16 @@ func (s *server) GetStats(req *pb.StatsRequest, stream pb.StatService_GetStatsSe
 }
 
 func main() {
-	port := 50000
+	args := os.Args
+	if len(args) < 2 {
+		log.Fatalf("Usage: %s <port>", args[0])
+	}
+
+	port, err := strconv.Atoi(args[1])
+	if err != nil {
+		log.Fatalf("Invalid port: %v", err)
+	}
+
 	address := ":" + strconv.Itoa(port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
@@ -49,8 +53,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	statChan := make(chan *models.Stat, 100)
-	pb.RegisterStatServiceServer(s, &server{statChan: statChan})
+	pb.RegisterStatServiceServer(s, &server{})
 	reflection.Register(s)
 
 	if err := s.Serve(lis); err != nil {

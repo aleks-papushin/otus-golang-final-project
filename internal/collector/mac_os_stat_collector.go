@@ -11,7 +11,8 @@ import (
 )
 
 type MacOSStatCollector struct {
-	Executor CommandExecutor
+	Executor  CommandExecutor
+	snapshots []*models.Stat
 }
 
 var (
@@ -22,8 +23,10 @@ var (
 func GetMacOSStatCollector() *MacOSStatCollector {
 	once.Do(func() {
 		instance = &MacOSStatCollector{
-			Executor: &RealCommandExecutor{},
+			Executor:  &RealCommandExecutor{},
+			snapshots: make([]*models.Stat, 0),
 		}
+		go instance.startCollecting()
 	})
 	return instance
 }
@@ -65,19 +68,59 @@ func (c *MacOSStatCollector) ParseCpuUsage(line string) models.CpuUsage {
 	}
 }
 
-func (c *MacOSStatCollector) CollectMacOSStat(statChan chan *models.Stat, n, m int) {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+func (c *MacOSStatCollector) CollectMacOSStat(outputInterval, collectingInterval int) <-chan *models.Stat {
+	collectingIntervalSec := time.Duration(collectingInterval) * time.Second
+	avgStatChan := make(chan *models.Stat)
 
-	wg.Add(1)
-	c.startStatCollecting(n, m, statChan, &wg)
+	go func() {
+		collectT := time.NewTimer(collectingIntervalSec)
+		<-collectT.C // wait collectingInterval seconds before taking first snapshot...
 
-	wg.Wait()
+		outputT := time.NewTicker(time.Duration(outputInterval) * time.Second)
+		for {
+			timeEdge := time.Now().Add(-collectingIntervalSec)
+			avgStatSnapshot := c.makeAvgSnapshotAfter(timeEdge)
+			avgStatChan <- avgStatSnapshot
+			<-outputT.C // ...then make new snapshot every outputInterval seconds
+		}
+	}()
+
+	return avgStatChan
 }
 
-func (c *MacOSStatCollector) startStatCollecting(n, m int, statChan chan *models.Stat, wg *sync.WaitGroup) {
-	defer wg.Done()
-	ticker := time.NewTicker(5 * time.Second)
+func (c *MacOSStatCollector) makeAvgSnapshotAfter(t time.Time) *models.Stat {
+	laSum := float32(0.0)
+	uCpuSum := float32(0.0)
+	sCpuSum := float32(0.0)
+	iCpuSum := float32(0.0)
+	snapShotsCount := float32(0.0)
+	for i := len(c.snapshots) - 1; i >= 0; i-- {
+		s := c.snapshots[i]
+		if s.Time.After(t) {
+			snapShotsCount++
+			laSum += s.LoadAverage
+			uCpuSum += s.CpuUsage.UserUsage
+			sCpuSum += s.CpuUsage.SysUsage
+			iCpuSum += s.CpuUsage.Idle
+		} else {
+			break
+		}
+	}
+
+	avgStatSnapshot := models.Stat{
+		LoadAverage: laSum / snapShotsCount,
+		CpuUsage: models.CpuUsage{
+			UserUsage: uCpuSum / snapShotsCount,
+			SysUsage:  sCpuSum / snapShotsCount,
+			Idle:      iCpuSum / snapShotsCount,
+		},
+		Time: time.Now(),
+	}
+	return &avgStatSnapshot
+}
+
+func (c *MacOSStatCollector) startCollecting() {
+	ticker := time.NewTicker(defaultCollectingInterval)
 
 	go func() {
 		for {
@@ -86,20 +129,18 @@ func (c *MacOSStatCollector) startStatCollecting(n, m int, statChan chan *models
 				statSnapshot, err := c.GetStatSnapshot()
 				statSlice := strings.Split(statSnapshot, "\n")
 				if err != nil {
-					errOut := fmt.Errorf("error occured attempting get load average %w", err)
+					errOut := fmt.Errorf("error occured on getting stat snapshot %w", err)
 					fmt.Println(errOut)
 				}
 				t := c.ParseDate(statSlice[1])
 				la := c.ParseLastSecLoadAverage(statSlice[2])
 				cpu := c.ParseCpuUsage(statSlice[3])
-
-				stat := models.Stat{
+				s := models.Stat{
 					LoadAverage: la,
 					CpuUsage:    cpu,
 					Time:        t,
 				}
-
-				statChan <- &stat
+				c.snapshots = append(c.snapshots, &s)
 			}
 		}
 	}()

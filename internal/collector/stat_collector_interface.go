@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	minInterval  = 5
-	maxSnapshots = 24 * 60 * 60
+	defaultCollectingInterval = 5 * time.Second
 )
 
 type StatCollector interface {

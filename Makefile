@@ -7,10 +7,10 @@ docker/start-server:
 start-server:
 	go build -o .build/server ./cmd/server
 	chmod +x .build/server
-	.build/server
+	.build/server 50000
 
 .PHONY: start-client
 start-client:
 	go build -o .build/client ./cmd/client
 	chmod +x .build/client
-	.build/client
+	.build/client 50000 5 5

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/aleks-papushin/system-monitor/internal/collector"
@@ -14,12 +15,19 @@ func main() {
 	n := 5
 	m := 15
 
-	statChan := make(chan *models.Stat, m)
 	c := &collector.MacOSStatCollector{}
 
 	wg.Add(1)
 
-	c.CollectMacOSStat(statChan, n, m)
+	statChan := c.CollectMacOSStat(n, m)
+
+	for {
+		s := models.Stat{}
+		select {
+		case s = <-statChan:
+			fmt.Printf(s.String())
+		}
+	}
 
 	wg.Wait()
 }
