@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/aleks-papushin/system-monitor/internal/models"
-	os_package "github.com/aleks-papushin/system-monitor/internal/os"
+	ospackage "github.com/aleks-papushin/system-monitor/internal/os"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -17,8 +18,10 @@ const (
 )
 
 type OSStatCollector struct {
-	Executor  CommandExecutor
-	snapshots []*models.Stat
+	Executor           CommandExecutor
+	snapshots          []*models.Stat
+	collectLoadAverage bool
+	collectCPUUsage    bool
 }
 
 var (
@@ -26,11 +29,24 @@ var (
 	once     sync.Once
 )
 
+func initConfig() {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Error reading config file, %s", err)
+	}
+}
+
 func GetMacOSStatCollector() *OSStatCollector {
 	once.Do(func() {
+		initConfig()
 		instance = &OSStatCollector{
-			Executor:  &RealCommandExecutor{},
-			snapshots: make([]*models.Stat, 0),
+			Executor:           &RealCommandExecutor{},
+			snapshots:          make([]*models.Stat, 0),
+			collectLoadAverage: viper.GetBool("collect.load_average"),
+			collectCPUUsage:    viper.GetBool("collect.cpu_usage"),
 		}
 		go instance.startCollecting()
 	})
@@ -38,8 +54,7 @@ func GetMacOSStatCollector() *OSStatCollector {
 }
 
 func (c *OSStatCollector) GetStatSnapshot() (string, error) {
-	statCmd := os_package.SysMonitorCmd
-	log.Printf("stat command: %s\n", statCmd)
+	statCmd := ospackage.SysMonitorCmd
 	outputBytes, err := c.Executor.Execute(statCmd[0], statCmd[1], statCmd[2])
 	if err != nil {
 		return "", err
@@ -141,8 +156,15 @@ func (c *OSStatCollector) startCollecting() {
 					fmt.Println(errOut)
 				}
 				t := c.ParseDate(statSlice[1])
-				la := c.ParseLastSecLoadAverage(statSlice[2])
-				cpu := c.ParseCpuUsage(statSlice[3])
+				var la float32
+				var cpu models.CpuUsage
+
+				if c.collectLoadAverage {
+					la = c.ParseLastSecLoadAverage(statSlice[2])
+				}
+				if c.collectCPUUsage {
+					cpu = c.ParseCpuUsage(statSlice[3])
+				}
 				s := models.Stat{
 					LoadAverage: la,
 					CpuUsage:    cpu,
