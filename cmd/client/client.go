@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/aleks-papushin/system-monitor/api/gen"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -36,22 +37,20 @@ func main() {
 
 	target := "localhost:" + strconv.Itoa(port)
 
-	conn, err := grpc.Dial(target, grpc.WithInsecure(), grpc.WithBlock())
+	client, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	defer conn.Close()
+	defer client.Close()
 
 	log.Println("Connection established")
-	c := pb.NewStatServiceClient(conn)
-
-	ctx := context.Background()
+	c := pb.NewStatServiceClient(client)
 
 	req := &pb.StatsRequest{
 		N: int32(n),
 		M: int32(m),
 	}
-	stream, err := c.GetStats(ctx, req)
+	stream, err := c.GetStats(context.Background(), req)
 	if err != nil {
 		log.Fatalf("could not get stats: %v", err)
 	}
