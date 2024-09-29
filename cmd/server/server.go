@@ -7,25 +7,25 @@ import (
 	"strconv"
 	"time"
 
-	pb "github.com/aleks-papushin/system-monitor/api/gen"
 	"github.com/aleks-papushin/system-monitor/internal/collector"
+	"github.com/aleks-papushin/system-monitor/internal/proto/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 type server struct {
-	pb.UnimplementedStatServiceServer
+	gen.UnimplementedStatServiceServer
 }
 
-func (s *server) GetStats(req *pb.StatsRequest, stream pb.StatService_GetStatsServer) error {
+func (s *server) GetStats(req *gen.StatsRequest, stream gen.StatService_GetStatsServer) error {
 	c := collector.GetMacOSStatCollector()
 	avgStatChan := c.CollectStat(int(req.N), int(req.M))
 	for stat := range avgStatChan {
-		resp := &pb.StatsResponse{
+		resp := &gen.StatsResponse{
 			LoadAverage: stat.LoadAverage,
-			UserUsage:   stat.CpuUsage.UserUsage,
-			SysUsage:    stat.CpuUsage.SysUsage,
-			Idle:        stat.CpuUsage.Idle,
+			UserUsage:   stat.CPUUsage.UserUsage,
+			SysUsage:    stat.CPUUsage.SysUsage,
+			Idle:        stat.CPUUsage.Idle,
 			Timestamp:   stat.Time.Format(time.RFC3339),
 		}
 		if err := stream.Send(resp); err != nil {
@@ -53,7 +53,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterStatServiceServer(s, &server{})
+	gen.RegisterStatServiceServer(s, &server{})
 	reflection.Register(s)
 
 	if err := s.Serve(lis); err != nil {

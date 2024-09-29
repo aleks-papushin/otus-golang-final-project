@@ -33,12 +33,12 @@ func TestParseCpuUsage(t *testing.T) {
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
-		ExpResult models.CpuUsage
+		ExpResult models.CPUUsage
 	}{
 		{
 			Name:     "Regular CPU usage entry",
 			TestData: "CPU usage: 2.36% user, 5.45% sys, 92.18% idle",
-			ExpResult: models.CpuUsage{
+			ExpResult: models.CPUUsage{
 				UserUsage: 2.36,
 				SysUsage:  5.45,
 				Idle:      92.18,
@@ -46,7 +46,7 @@ func TestParseCpuUsage(t *testing.T) {
 		},
 	} {
 		t.Run(tc.Name, func(t *testing.T) {
-			actualResult := c.ParseCpuUsage(tc.TestData)
+			actualResult := c.ParseCPUUsage(tc.TestData)
 			require.Equal(t, tc.ExpResult, actualResult)
 		})
 	}

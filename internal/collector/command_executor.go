@@ -17,6 +17,6 @@ type MockCommandExecutor struct {
 	Err    error
 }
 
-func (m *MockCommandExecutor) Execute(name string, arg ...string) ([]byte, error) {
+func (m *MockCommandExecutor) Execute(_ string, _ ...string) ([]byte, error) {
 	return m.Output, m.Err
 }

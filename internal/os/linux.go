@@ -1,5 +1,5 @@
 //go:build linux
 
-package os_package
+package build
 
 var SysMonitorCmd = []string{"top", "-b", "-n 1"}

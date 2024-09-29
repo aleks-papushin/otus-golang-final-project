@@ -1,5 +1,5 @@
 //go:build darwin
 
-package os_package
+package build
 
 var SysMonitorCmd = []string{"top", "-l 1", "-n 0"}

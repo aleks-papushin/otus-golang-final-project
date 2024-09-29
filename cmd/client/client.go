@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"strconv"
 
-	pb "github.com/aleks-papushin/system-monitor/api/gen"
+	"github.com/aleks-papushin/system-monitor/internal/proto/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -25,12 +26,12 @@ func main() {
 		log.Fatalf("Invalid port: %v", err)
 	}
 
-	n, err := strconv.Atoi(args[2])
+	n, err := strconv.ParseInt(args[2], 10, 32)
 	if err != nil {
 		log.Fatalf("Invalid N: %v", err)
 	}
 
-	m, err := strconv.Atoi(args[3])
+	m, err := strconv.ParseInt(args[3], 10, 32)
 	if err != nil {
 		log.Fatalf("Invalid M: %v", err)
 	}
@@ -44,27 +45,31 @@ func main() {
 	defer client.Close()
 
 	log.Println("Connection established")
-	c := pb.NewStatServiceClient(client)
+	c := gen.NewStatServiceClient(client)
 
-	req := &pb.StatsRequest{
-		N: int32(n),
-		M: int32(m),
+	req := &gen.StatsRequest{
+		N: n,
+		M: m,
 	}
 	stream, err := c.GetStats(context.Background(), req)
 	if err != nil {
-		log.Fatalf("could not get stats: %v", err)
+		log.Printf("could not get stats: %v", err)
+		client.Close()
+		return
 	}
 
 	log.Println("Established stream")
 
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			log.Println("Stream closed by server")
 			break
 		}
 		if err != nil {
-			log.Fatalf("error receiving response: %v", err)
+			log.Printf("error receiving response: %v", err)
+			client.Close()
+			return
 		}
 		log.Printf("Stats: %v", resp)
 	}
