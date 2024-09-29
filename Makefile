@@ -1,7 +1,7 @@
 .PHONY: docker/start-server
 docker/start-server:
 	docker build -t stat-server .
-	docker run -p 50000:50000 stat-server
+	docker run -p 50000:50000 stat-server 50000
 
 .PHONY: start-server
 start-server:
@@ -13,4 +13,4 @@ start-server:
 start-client:
 	go build -o .build/client ./cmd/client
 	chmod +x .build/client
-	.build/client 50000 5 5
+	.build/client 50000 5 15

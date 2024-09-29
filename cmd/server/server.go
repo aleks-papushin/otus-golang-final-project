@@ -19,7 +19,7 @@ type server struct {
 
 func (s *server) GetStats(req *pb.StatsRequest, stream pb.StatService_GetStatsServer) error {
 	c := collector.GetMacOSStatCollector()
-	avgStatChan := c.CollectMacOSStat(int(req.N), int(req.M))
+	avgStatChan := c.CollectStat(int(req.N), int(req.M))
 	for stat := range avgStatChan {
 		resp := &pb.StatsResponse{
 			LoadAverage: stat.LoadAverage,

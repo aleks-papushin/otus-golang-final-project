@@ -14,6 +14,6 @@ RUN go build -o server ./cmd/server
 
 RUN chmod +x ./server
 
-EXPOSE 50051
+EXPOSE 50000
 
-CMD ["./server"]
+ENTRYPOINT ["./server"]

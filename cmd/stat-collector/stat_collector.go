@@ -15,11 +15,11 @@ func main() {
 	n := 5
 	m := 15
 
-	c := &collector.MacOSStatCollector{}
+	c := &collector.OSStatCollector{}
 
 	wg.Add(1)
 
-	statChan := c.CollectMacOSStat(n, m)
+	statChan := c.CollectStat(n, m)
 
 	for {
 		s := models.Stat{}

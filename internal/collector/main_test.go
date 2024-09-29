@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseLastSecLoadAverage(t *testing.T) {
-	c := &MacOSStatCollector{}
+	c := &OSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
@@ -29,7 +29,7 @@ func TestParseLastSecLoadAverage(t *testing.T) {
 }
 
 func TestParseCpuUsage(t *testing.T) {
-	c := &MacOSStatCollector{}
+	c := &OSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
@@ -53,7 +53,7 @@ func TestParseCpuUsage(t *testing.T) {
 }
 
 func TestParseDate(t *testing.T) {
-	c := &MacOSStatCollector{}
+	c := &OSStatCollector{}
 	for _, tc := range []struct {
 		Name      string
 		TestData  string
@@ -78,7 +78,7 @@ func TestGetStatSnapshot(t *testing.T) {
 		Output: mockOutput,
 		Err:    nil,
 	}
-	c := &MacOSStatCollector{
+	c := &OSStatCollector{
 		Executor: mockExecutor,
 	}
 
