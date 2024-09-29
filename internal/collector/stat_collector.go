@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,7 @@ func GetMacOSStatCollector() *OSStatCollector {
 
 func (c *OSStatCollector) GetStatSnapshot() (string, error) {
 	statCmd := os_package.SysMonitorCmd
+	log.Printf("stat command: %s\n", statCmd)
 	outputBytes, err := c.Executor.Execute(statCmd[0], statCmd[1], statCmd[2])
 	if err != nil {
 		return "", err
