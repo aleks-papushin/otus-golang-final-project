@@ -1,3 +1,3 @@
 collect:
-  load_average: false
+  load_average: true
   cpu_usage: true

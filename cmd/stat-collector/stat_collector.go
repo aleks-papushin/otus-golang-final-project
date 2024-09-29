@@ -1,33 +1,41 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/aleks-papushin/system-monitor/internal/collector"
-	"github.com/aleks-papushin/system-monitor/internal/models"
 )
 
 func main() {
+	n := flag.Int("n", 0, "Output stat interval")
+	m := flag.Int("m", 0, "Collecting stat interval")
+	flag.Parse()
+
+	if *n == 0 || *m == 0 {
+		fmt.Println("Both arguments should be greater than 0")
+		os.Exit(1)
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	n := 5
-	m := 15
+	c := collector.GetMacOSStatCollector()
 
-	c := &collector.OSStatCollector{}
+	statChan := c.CollectStat(*n, *m)
 
-	wg.Add(1)
-
-	statChan := c.CollectStat(n, m)
-
-	for {
-		s := models.Stat{}
-		select {
-		case s = <-statChan:
-			fmt.Printf(s.String())
+	go func() {
+		for {
+			s, ok := <-statChan
+			if !ok {
+				break
+			}
+			fmt.Printf("%s\n", s.String())
 		}
-	}
+		wg.Done()
+	}()
 
 	wg.Wait()
 }
